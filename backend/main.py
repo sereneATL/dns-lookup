@@ -32,14 +32,17 @@ app = FastAPI(
     openapi_url=f"/{settings.API_V1_STR}/openapi.json",
 )
 
+# setup prometheus
 Instrumentator().instrument(app).expose(app)
 
+# override default validation error body
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc: RequestValidationError):
     exc_str = f'{exc}'.replace('\n', ' ').replace('   ', ' ')
     data = ast.literal_eval(exc_str)[0]
     return JSONResponse(status_code=422, content={"message": f"{data['msg']} - {data['loc']}"})
 
+# create middleware to log all requests and responses
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     idem = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
@@ -152,8 +155,10 @@ def lookup(request: Request, db: Session = Depends(get_db), domain: str = Query(
     responses={400: {"model": schemas.HTTPError}, 422: {"model": schemas.HTTPError}})
 async def validate(request: schemas.ValidateIPRequest = params.Body(..., description="IP to validate")):
     try:
+        # attempt to validate if ip is ipv4
         dns.ipv4.canonicalize(request.ip)
     except dns.exception.SyntaxError:
+        # return false if provided IP is not ipv4
         return schemas.ValidateIPResponse(status=False)
     except Exception as e:
         return JSONResponse(status_code=400, content={"message": str(e)})
