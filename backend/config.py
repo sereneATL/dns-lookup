@@ -9,8 +9,8 @@ class Settings(BaseSettings):
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
     POSTGRES_DB: str
-    POSTGRES_URL: str
-    KUBERNETES: bool
+    POSTGRES_URL: str = 'host.docker.internal:5432'
+    KUBERNETES: bool = False
 
     model_config = SettingsConfigDict(env_file=f"{pathlib.Path(__file__).resolve().parent}/.env")
 

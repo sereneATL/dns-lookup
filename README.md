@@ -8,6 +8,8 @@
 - Docker
 
 ## Getting started
+At the root of the project, create a `.env` file and copy over the variables from `.env.sample`. Replace these sample values with your own values i.e. database user, database password, etc. 
+
 To run the application, run the following command at the root
 ```
 docker-compose up -d --build
