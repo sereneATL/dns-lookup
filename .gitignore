@@ -1,0 +1,12 @@
+__pycache__
+app.egg-info
+*.pyc
+.mypy_cache
+.coverage
+htmlcov
+poetry.lock
+.cache
+.venv
+.env
+problem-main
+.DS_Store

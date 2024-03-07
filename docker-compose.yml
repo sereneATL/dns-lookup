@@ -1,0 +1,54 @@
+version: '3s'
+
+services:
+  backend:
+    build: .
+    command: uvicorn main:app --reload --workers 1 --host 0.0.0.0 --port 3000
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    depends_on:
+      - db
+    restart: unless-stopped
+    stop_signal: SIGINT
+    stop_grace_period: 30s
+
+  db:
+    image: postgres:15-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER?Variable not set}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
+      - POSTGRES_DB=${POSTGRES_DB?Variable not set}
+    env_file:
+      - .env
+    restart: unless-stopped
+    stop_signal: SIGINT
+    stop_grace_period: 30s
+  
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    depends_on:
+      - backend
+    restart: unless-stopped
+    stop_signal: SIGINT
+    stop_grace_period: 30s
+
+volumes:
+  prometheus_data:
+      driver: local
+      driver_opts:
+        o: bind
+        type: none
+        device: ./prometheus_data
+  postgres_data: 
