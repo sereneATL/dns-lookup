@@ -1,7 +1,10 @@
+import ast
 import logging
 import random
 import string
 import time
+
+from fastapi.exceptions import RequestValidationError
 import models
 import schemas
 import dns.resolver
@@ -9,7 +12,7 @@ import dns.ipv4
 import dns.exception
 from config import settings
 from database import get_db, Base, engine
-from fastapi import Body, Depends, FastAPI, Query, Request, status
+from fastapi import Depends, FastAPI, Query, Request, status, params
 from fastapi.responses import JSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import HttpUrl, ValidationError
@@ -30,6 +33,12 @@ app = FastAPI(
 )
 
 Instrumentator().instrument(app).expose(app)
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc: RequestValidationError):
+    exc_str = f'{exc}'.replace('\n', ' ').replace('   ', ' ')
+    data = ast.literal_eval(exc_str)[0]
+    return JSONResponse(status_code=422, content={"message": f"{data['msg']} - {data['loc']}"})
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -80,7 +89,7 @@ def get_health():
     status_code=status.HTTP_200_OK,
     response_description="OK",
     response_model=schemas.Query,
-    responses={404: {"model": schemas.HTTPError}, 400: {"model": schemas.HTTPError}}
+    responses={404: {"model": schemas.HTTPError}, 400: {"model": schemas.HTTPError}, 422: {"model": schemas.HTTPError}}
 )
 def lookup(request: Request, db: Session = Depends(get_db), domain: str = Query(..., description="Domain name")):
     # If no provided domain, return 400 bad request
@@ -140,8 +149,8 @@ def lookup(request: Request, db: Session = Depends(get_db), domain: str = Query(
     status_code=status.HTTP_200_OK,
     response_description="OK",
     response_model=schemas.ValidateIPResponse,
-    responses={400: {"model": schemas.HTTPError}})
-async def validate(request: schemas.ValidateIPRequest = Body(..., description="IP to validate"), db: Session = Depends(get_db)):
+    responses={400: {"model": schemas.HTTPError}, 422: {"model": schemas.HTTPError}})
+async def validate(request: schemas.ValidateIPRequest = params.Body(..., description="IP to validate")):
     try:
         dns.ipv4.canonicalize(request.ip)
     except dns.exception.SyntaxError:

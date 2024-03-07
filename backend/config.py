@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     API_V1_STR: str = "v1"
-    VERSION: str = "0.1.0"
+    VERSION: str = "1.0"
     PROJECT_NAME: str = "DNS lookup system"
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
